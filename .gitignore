@@ -42,11 +42,41 @@
 *.idb
 *.pdb
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# editor
+*.swp
+
+# autoconf
+aclocal.m4
+autom4te.cache
+ar-lib
+build
+config.*
+configure
+cscope.*
+depcomp
+install-sh
+libtool
+ltmain.sh
+Makefile
+Makefile.in
+missing
+stamp-h1
+test-driver
+*compile
+*.gcda
+*.gcno
+*.sw?
+*~
+*.lo
+*.la
+*.o
+*.tar.gz
+*.rpm
+*.diff
+*.patch
+.libs
+.deps
+
+# nfs garbage
+.nfs*
+
