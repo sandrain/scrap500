@@ -4,7 +4,7 @@ noinst_HEADERS = scrap500.h
 
 AM_CFLAGS = $(SQLITE3_CFLAGS) $(LIBXML_CFLAGS) $(CURL_CFLAGS)
 
-AM_LDFLAGS = $(SQLITE3_LIBS) $(LIBXML_LIBS) $(CURL_LIBS)
+AM_LDFLAGS = $(SQLITE3_LIBS) $(LIBXML_LIBS) $(CURL_LIBS) -pthread
 
 scrap500_SOURCES = scrap500.c \
                    scrap500-http.c \
