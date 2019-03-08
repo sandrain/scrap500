@@ -51,7 +51,7 @@ static char *get_child_text(xmlNode *node, const char *name, int nth)
     return NULL;
 }
 
-int scrap500_parser_parse_site_record(xmlNode *node, scrap500_site_t *site)
+static int parse_site_record(xmlNode *node, scrap500_site_t *site)
 {
     xmlNode *tmp = NULL;
     xmlNode *table = NULL;
@@ -198,6 +198,13 @@ int scrap500_parser_parse_list(scrap500_list_t *list)
 out:
     if (doc)
         xmlFreeDoc(doc);
+
+    return ret;
+}
+
+int scrap500_parser_parse_specs(scrap500_list_t *list)
+{
+    int ret = 0;
 
     return ret;
 }

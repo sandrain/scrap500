@@ -55,19 +55,35 @@ typedef struct _scrap500_list scrap500_list_t;
 
 extern char *scrap500_datadir;
 
+#define _llu(x)  ((unsigned long long) (x))
+
 static inline
 void scrap500_list_html_filename(scrap500_list_t *list, int page, char *buf)
 {
     if (buf)
-        sprintf(buf, "%s/list-%d%02d.%d.html",
+        sprintf(buf, "%s/list/%d%02d.%d.html",
                      scrap500_datadir, list->id/100, list->id%100, page);
+}
+
+static inline void scrap500_site_html_filename(uint64_t site_id, char *buf)
+{
+    if (buf)
+        sprintf(buf, "%s/site/%llu.html", scrap500_datadir, _llu(site_id));
+}
+
+static inline void scrap500_system_html_filename(uint64_t site_id, char *buf)
+{
+    if (buf)
+        sprintf(buf, "%s/system/%llu.html", scrap500_datadir, _llu(site_id));
 }
 
 int scrap500_http_fetch_list(scrap500_list_t *list);
 
+int scrap500_http_fetch_specs(scrap500_list_t *list);
+
 int scrap500_parser_parse_list(scrap500_list_t *list);
 
-int scrap500_parser_parse_site_record(xmlNode *node, scrap500_site_t *site);
+int scrap500_parser_parse_specs(scrap500_list_t *list);
 
 typedef void * scrap500_db_t;
 

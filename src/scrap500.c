@@ -24,6 +24,7 @@
 static int debug;
 static int initdb;
 static int no_fetch;
+static int specs;
 
 static uint32_t n_list;
 static uint32_t n_list_all;
@@ -33,6 +34,33 @@ char *scrap500_datadir = "/tmp/scrap500";
 static char *dbname = "scrap500.sqlite3.db";
 
 static uint32_t n_threads;
+
+static int prepare_datadir(void)
+{
+    int ret = 0;
+    char cmd[4096] = { 0, };
+
+    sprintf(cmd, "[ ! -d \"%s\" ] && mkdir %s",
+                 scrap500_datadir, scrap500_datadir);
+    ret = system(cmd);
+
+    sprintf(cmd, "[ ! -d \"%s/list\" ] && mkdir %s/list",
+                 scrap500_datadir, scrap500_datadir);
+    ret = system(cmd);
+
+    if (specs) {
+        sprintf(cmd, "[ ! -d \"%s/site\" ] && mkdir %s/site",
+                     scrap500_datadir, scrap500_datadir);
+        ret = system(cmd);
+
+        sprintf(cmd, "[ ! -d \"%s/system\" ] && mkdir %s/system",
+                     scrap500_datadir, scrap500_datadir);
+        ret = system(cmd);
+    }
+
+out:
+    return 0;
+}
 
 static inline scrap500_list_t *allocate_list(struct tm *now)
 {
@@ -151,8 +179,8 @@ static inline void dump_list(scrap500_list_t *list)
     for (i = 0; i < 500; i++) {
         rank = &list->rank[i];
 
-        printf("[%3d] site=%6lu, system=%6lu\n",
-                rank->rank, rank->site_id, rank->system_id);
+        printf("[%3d] site=%6llu, system=%6llu\n",
+                rank->rank, _llu(rank->site_id), _llu(rank->system_id));
     }
 }
 
@@ -193,6 +221,22 @@ static void *scrap500_run(void *data)
             goto out;
         }
 
+        if (!no_fetch && specs) {
+            ret = scrap500_http_fetch_specs(list);
+            if (ret) {
+                fprintf(stderr, "failed to fetch specifications.\n");
+                goto out;
+            }
+        }
+
+        if (specs) {
+            ret = scrap500_parser_parse_specs(list);
+            if (ret) {
+                fprintf(stderr, "failed to parse specs.\n");
+                goto out;
+            }
+        }
+
         if (debug)
             dump_list(list);
 
@@ -229,11 +273,12 @@ static struct option const long_opts[] = {
     { "list", 1, 0, 'l' },
     { "no-fetch", 0, 0, 'n' },
     { "path", 1, 0, 'p' },
+    { "specs", 0, 0, 's' },
     { "threads", 1, 0, 'n' },
     { 0, 0, 0, 0},
 };
 
-static const char *short_opts = "adD:hil:np:t:";
+static const char *short_opts = "adD:hil:np:st:";
 
 static const char *usage_str =
 "Usage: %s [options..]\n"
@@ -247,6 +292,7 @@ static const char *usage_str =
 "  -l, --list=<YYYYMM>    get the list of <YYYYMM>\n"
 "  -n, --no-fetch         do not fetch from network but use the cached files\n"
 "  -p, --path=<dirname>   store data in <dirname> (default: /tmp/scrap500)\n"
+"  -s, --specs            fetch system and site details\n"
 "  -t, --threads=<N>      spawn n threads\n"
 "\n";
 
@@ -264,7 +310,6 @@ int main(int argc, char **argv)
     uint32_t date = 0;
     time_t nowp = 0;
     struct tm *now = NULL;
-    struct stat sb = { 0, };
 
     read_program_name(argv[0]);
 
@@ -308,6 +353,10 @@ int main(int argc, char **argv)
             scrap500_datadir = optarg;
             break;
 
+        case 's':
+            specs = 1;
+            break;
+
         case 't':
             n_threads = atoi(optarg);
             break;
@@ -319,25 +368,10 @@ int main(int argc, char **argv)
         }
     }
 
-    ret = mkdir(scrap500_datadir, 0755);
-    if (ret < 0) {
-        if (errno != EEXIST) {
-            fprintf(stderr, "cannot create %s: %s\n",
-                            scrap500_datadir, strerror(errno));
-            goto out;
-        }
-
-        ret = stat(scrap500_datadir, &sb);
-        if (ret < 0) {
-            perror("stat");
-            goto out;
-        }
-
-        if (!S_ISDIR(sb.st_mode)) {
-            fprintf(stderr, "%s is not a directory\n", scrap500_datadir);
-            ret = -1;
-            goto out;
-        }
+    ret = prepare_datadir();
+    if (ret) {
+        fprintf(stderr, "failed to prepare data directory.\n");
+        goto out;
     }
 
     curl_global_init(CURL_GLOBAL_DEFAULT);

@@ -131,15 +131,16 @@ int scrap500_db_write_list(scrap500_db_t db, scrap500_list_t *list)
 
         pos = sql;
         pos += sprintf(pos,
-                       "insert or ignore into site (site_id) values (%lu);\n",
-                       rank->site_id);
+                       "insert or ignore into site (site_id) values (%llu);\n",
+                       _llu(rank->site_id));
         pos += sprintf(pos,
-                       "insert or ignore into system (system_id) values (%lu);\n",
-                       rank->system_id);
+                       "insert or ignore into system (system_id) values (%llu);\n",
+                       _llu(rank->system_id));
         pos += sprintf(pos,
-                       "insert into list (ym, rank, system_id, site_id)\n"
-                       "values (%d, %d, %lu, %lu);\n",
-                       list->id, rank->rank, rank->system_id, rank->site_id);
+                       "insert or ignore into list (ym, rank, system_id, site_id)\n"
+                       "values (%d, %d, %llu, %llu);\n",
+                       list->id, rank->rank,
+                       _llu(rank->system_id), _llu(rank->site_id));
 
         ret = exec_simple_sql(dbconn, sql);
         if (ret != SQLITE_OK) {
