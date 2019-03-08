@@ -53,12 +53,14 @@ struct _scrap500_list {
 
 typedef struct _scrap500_list scrap500_list_t;
 
+extern char *scrap500_datadir;
+
 static inline
 void scrap500_list_html_filename(scrap500_list_t *list, int page, char *buf)
 {
     if (buf)
-        sprintf(buf, "/tmp/list-%d%02d.%d.html",
-                     list->id/100, list->id%100, page);
+        sprintf(buf, "%s/list-%d%02d.%d.html",
+                     scrap500_datadir, list->id/100, list->id%100, page);
 }
 
 int scrap500_http_fetch_list(scrap500_list_t *list);
@@ -66,6 +68,14 @@ int scrap500_http_fetch_list(scrap500_list_t *list);
 int scrap500_parser_parse_list(scrap500_list_t *list);
 
 int scrap500_parser_parse_site_record(xmlNode *node, scrap500_site_t *site);
+
+typedef void * scrap500_db_t;
+
+scrap500_db_t scrap500_db_open(const char *dbname, int initdb);
+
+void scrap500_db_close(scrap500_db_t db);
+
+int scrap500_db_write_list(scrap500_db_t db, scrap500_list_t *list);
 
 #endif /* __SCRAP500_H__ */
 

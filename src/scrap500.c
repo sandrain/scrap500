@@ -15,14 +15,22 @@
 #include <libgen.h>
 #include <limits.h>
 #include <getopt.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "scrap500.h"
 
 static int debug;
+static int initdb;
+static int no_fetch;
 
 static uint32_t n_list;
 static uint32_t n_list_all;
 static scrap500_list_t *scrap500_list;
+
+char *scrap500_datadir = "/tmp/scrap500";
+static char *dbname = "scrap500.sqlite3.db";
 
 static uint32_t n_threads;
 
@@ -143,7 +151,7 @@ static inline void dump_list(scrap500_list_t *list)
     for (i = 0; i < 500; i++) {
         rank = &list->rank[i];
 
-        printf("[%3d] site=%6llu, system=%6llu\n",
+        printf("[%3d] site=%6lu, system=%6lu\n",
                 rank->rank, rank->site_id, rank->system_id);
     }
 }
@@ -153,22 +161,31 @@ static void *scrap500_run(void *data)
     int i = 0;
     int ret = 0;
     int page = 0;
+    scrap500_db_t db = NULL;
     scrap500_list_t *list = NULL;
+
+    db = scrap500_db_open(dbname, initdb);
+    if (!db) {
+        fprintf(stderr, "failed to create a db.\n");
+        goto out;
+    }
 
     for (i = 0; i < n_list; i++) {
         list = &scrap500_list[i];
         if (!list)
             continue;
 
-        open_tmpfiles(list);
+        if (!no_fetch) {
+            open_tmpfiles(list);
 
-        ret = scrap500_http_fetch_list(list);
-        if (ret) {
-            fprintf(stderr, "failed to fetch the list.\n");
-            goto out;
+            ret = scrap500_http_fetch_list(list);
+            if (ret) {
+                fprintf(stderr, "failed to fetch the list.\n");
+                goto out;
+            }
+
+            close_tmpfiles(list);
         }
-
-        close_tmpfiles(list);
 
         ret = scrap500_parser_parse_list(list);
         if (ret) {
@@ -178,7 +195,15 @@ static void *scrap500_run(void *data)
 
         if (debug)
             dump_list(list);
+
+        ret = scrap500_db_write_list(db, list);
+        if (ret) {
+            fprintf(stderr, "failed to process the database.\n");
+            goto out;
+        }
     }
+
+    scrap500_db_close(db);
 
 out:
     return NULL;
@@ -198,26 +223,30 @@ static inline void read_program_name(const char *path)
 static struct option const long_opts[] = {
     { "all", 0, 0, 'a' },
     { "debug", 0, 0, 'd' },
-    { "csv", 1, 0, 'c' },
+    { "dbname", 1, 0, 'D' },
     { "help", 0, 0, 'h' },
+    { "initdb", 0, 0, 'i' },
     { "list", 1, 0, 'l' },
-    { "sqlite", 1, 0, 's' },
+    { "no-fetch", 0, 0, 'n' },
+    { "path", 1, 0, 'p' },
     { "threads", 1, 0, 'n' },
     { 0, 0, 0, 0},
 };
 
-static const char *short_opts = "ac:dhl:st:";
+static const char *short_opts = "adD:hil:np:t:";
 
 static const char *usage_str =
 "Usage: %s [options..]\n"
 "\n"
 "  available options:\n"
 "  -a, --all              get all available list\n"
-"  -c, --csv=<dir>        store output in csv format in <dir>\n"
 "  -d, --debug            run in a debugging mode with noisy output\n"
+"  -D, --dbname=<db file> store output in sqlite datbase <db file>\n"
 "  -h, --help             print help message\n"
+"  -i, --initdb           initialize the database\n"
 "  -l, --list=<YYYYMM>    get the list of <YYYYMM>\n"
-"  -s, --sqlite=<db file> store output in sqlite datbase <db file>\n"
+"  -n, --no-fetch         do not fetch from network but use the cached files\n"
+"  -p, --path=<dirname>   store data in <dirname> (default: /tmp/scrap500)\n"
 "  -t, --threads=<N>      spawn n threads\n"
 "\n";
 
@@ -235,6 +264,7 @@ int main(int argc, char **argv)
     uint32_t date = 0;
     time_t nowp = 0;
     struct tm *now = NULL;
+    struct stat sb = { 0, };
 
     read_program_name(argv[0]);
 
@@ -254,18 +284,28 @@ int main(int argc, char **argv)
             set_all_list();
             break;
 
-        case 'c':
-            break;
-
         case 'd':
             debug = 1;
+            break;
+
+        case 'D':
+            dbname = optarg;
+            break;
+
+        case 'i':
+            initdb = 1;
             break;
 
         case 'l':
             list_append(optarg);
             break;
 
-        case 's':
+        case 'n':
+            no_fetch = 1;
+            break;
+
+        case 'p':
+            scrap500_datadir = optarg;
             break;
 
         case 't':
@@ -279,12 +319,34 @@ int main(int argc, char **argv)
         }
     }
 
+    ret = mkdir(scrap500_datadir, 0755);
+    if (ret < 0) {
+        if (errno != EEXIST) {
+            fprintf(stderr, "cannot create %s: %s\n",
+                            scrap500_datadir, strerror(errno));
+            goto out;
+        }
+
+        ret = stat(scrap500_datadir, &sb);
+        if (ret < 0) {
+            perror("stat");
+            goto out;
+        }
+
+        if (!S_ISDIR(sb.st_mode)) {
+            fprintf(stderr, "%s is not a directory\n", scrap500_datadir);
+            ret = -1;
+            goto out;
+        }
+    }
+
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
     scrap500_run(NULL);
 
     curl_global_cleanup();
 
+out:
     return ret;
 }
 
