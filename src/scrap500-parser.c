@@ -59,7 +59,7 @@ static int parse_site_record(xmlNode *node, scrap500_site_t *site)
 
     str = get_child_text(node, "h1", 2);
     if (str)
-        site->name = str;
+        site->name = strdup(str);
 
     table = get_child_element(node, "table", 1);
 
@@ -67,22 +67,22 @@ static int parse_site_record(xmlNode *node, scrap500_site_t *site)
     tmp = get_child_element(tmp, "td", 1);
     str = get_child_text(tmp, "a", 1);
     if (str)
-        site->url = str;
+        site->url = strdup(str);
 
     tmp = get_child_element(table, "tr", 2);
     str = get_child_text(tmp, "td", 1);
     if (str)
-        site->segment = str;
+        site->segment = strdup(str);
 
     tmp = get_child_element(table, "tr", 3);
     str = get_child_text(tmp, "td", 1);
     if (str)
-        site->city = str;
+        site->city = strdup(str);
 
     tmp = get_child_element(table, "tr", 4);
     str = get_child_text(tmp, "td", 1);
     if (str)
-        site->country = str;
+        site->country = strdup(str);
 
     return 0;
 }
@@ -201,6 +201,61 @@ out:
 
     return ret;
 }
+
+int scrap500_parser_parse_site(uint64_t site_id, scrap500_site_t *site)
+{
+    int ret = 0;
+    int opts = 0;
+    char filename[PATH_MAX] = { 0, };
+    htmlDocPtr doc = NULL;
+    xmlNode *root = NULL;
+    xmlNode *current = NULL;
+
+    scrap500_site_html_filename(site_id, filename);
+
+    opts = HTML_PARSE_NOBLANKS | HTML_PARSE_NOERROR
+           | HTML_PARSE_NOWARNING | HTML_PARSE_NONET;
+
+    doc = htmlReadFile(filename, NULL, opts);
+    if (!doc) {
+        fprintf(stderr, "cannot parse the document %s\n", filename);
+        ret = EIO;
+        goto out;
+    }
+
+    root = xmlDocGetRootElement(doc);
+    if (!root) {
+        fprintf(stderr, "cannot parse the document %s\n", filename);
+        ret = EIO;
+        goto out;
+    }
+
+    current = get_child_element(root, "body", 1);
+    current = get_child_element(current, "div", 2);
+    current = get_child_element(current, "div", 1);
+    current = get_child_element(current, "div", 1);
+
+    ret = parse_site_record(current, site);
+    if (ret)
+        fprintf(stderr, "failed to parse the site record.\n");
+
+out:
+    if (doc)
+        xmlFreeDoc(doc);
+
+    return ret;
+}
+
+int scrap500_parser_parse_system(uint64_t system_id, scrap500_system_t *system)
+{
+    int ret = 0;
+    char filename[PATH_MAX] = { 0, };
+
+    scrap500_system_html_filename(system_id, filename);
+
+    return ret;
+}
+
 
 int scrap500_parser_parse_specs(scrap500_list_t *list)
 {

@@ -16,6 +16,8 @@
 #include <libxml/HTMLparser.h>
 #include <curl/curl.h>
 
+#define _llu(x)  ((unsigned long long) (x))
+
 struct _scrap500_site {
     uint64_t id;
     char *name;
@@ -26,6 +28,23 @@ struct _scrap500_site {
 };
 
 typedef struct _scrap500_site scrap500_site_t;
+
+static inline void scrap500_site_dump(scrap500_site_t *site)
+{
+    if (!site)
+        return;
+
+    printf("\n## site: %s (id=%llu)\n"
+           "## url: %s\n"
+           "## segment: %s\n"
+           "## city: %s\n"
+           "## country: %s\n\n",
+           site->name ? site->name : "", _llu(site->id),
+           site->url ? site->url : "",
+           site->segment ? site->segment : "",
+           site->city ? site->city : "",
+           site->country ? site->country : "");
+}
 
 struct _scrap500_system {
     uint64_t id;
@@ -55,7 +74,6 @@ typedef struct _scrap500_list scrap500_list_t;
 
 extern char *scrap500_datadir;
 
-#define _llu(x)  ((unsigned long long) (x))
 
 static inline
 void scrap500_list_html_filename(scrap500_list_t *list, int page, char *buf)
@@ -84,6 +102,10 @@ int scrap500_http_fetch_specs(scrap500_list_t *list);
 int scrap500_parser_parse_list(scrap500_list_t *list);
 
 int scrap500_parser_parse_specs(scrap500_list_t *list);
+
+int scrap500_parser_parse_site(uint64_t site_id, scrap500_site_t *site);
+
+int scrap500_parser_parse_system(uint64_t system_id, scrap500_system_t *system);
 
 typedef void * scrap500_db_t;
 

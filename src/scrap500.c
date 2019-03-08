@@ -26,6 +26,8 @@ static int initdb;
 static int no_fetch;
 static int specs;
 
+static uint64_t query_site;
+
 static uint32_t n_list;
 static uint32_t n_list_all;
 static scrap500_list_t *scrap500_list;
@@ -274,11 +276,12 @@ static struct option const long_opts[] = {
     { "no-fetch", 0, 0, 'n' },
     { "path", 1, 0, 'p' },
     { "specs", 0, 0, 's' },
+    { "site", 1, 0, 'S' },
     { "threads", 1, 0, 'n' },
     { 0, 0, 0, 0},
 };
 
-static const char *short_opts = "adD:hil:np:st:";
+static const char *short_opts = "adD:hil:np:sS:t:";
 
 static const char *usage_str =
 "Usage: %s [options..]\n"
@@ -293,6 +296,7 @@ static const char *usage_str =
 "  -n, --no-fetch         do not fetch from network but use the cached files\n"
 "  -p, --path=<dirname>   store data in <dirname> (default: /tmp/scrap500)\n"
 "  -s, --specs            fetch system and site details\n"
+"  -S, --site=<site_id>   print the information of site <site_id>\n"
 "  -t, --threads=<N>      spawn n threads\n"
 "\n";
 
@@ -357,6 +361,10 @@ int main(int argc, char **argv)
             specs = 1;
             break;
 
+        case 'S':
+            query_site = strtoull(optarg, NULL, 0);
+            break;
+
         case 't':
             n_threads = atoi(optarg);
             break;
@@ -366,6 +374,19 @@ int main(int argc, char **argv)
             usage(0);
             break;
         }
+    }
+
+    if (query_site) {
+        scrap500_site_t site = { 0, };
+
+        ret = scrap500_parser_parse_site(query_site, &site);
+        if (ret)
+            fprintf(stderr, "failed to fetch the site info (id=%llu)\n",
+                            _llu(query_site));
+        else
+            scrap500_site_dump(&site);
+
+        goto out;
     }
 
     ret = prepare_datadir();
