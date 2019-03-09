@@ -1,4 +1,4 @@
-bin_PROGRAMS = scrap500
+bin_PROGRAMS = scrap500 getsysattrs
 
 noinst_HEADERS = scrap500.h
 
@@ -10,6 +10,8 @@ scrap500_SOURCES = scrap500.c \
                    scrap500-http.c \
                    scrap500-parser.c \
                    scrap500-db.c
+
+getsysattrs_SOURCES = getsysattrs.c
 
 CLEANFILES = $(bin_PROGRAMS)
 

@@ -49,7 +49,6 @@ static inline void scrap500_site_dump(scrap500_site_t *site)
 struct _scrap500_system {
     uint64_t id;
     char *name;
-    scrap500_site_t *site;
 };
 
 typedef struct _scrap500_system scrap500_system_t;
