@@ -257,6 +257,7 @@ out:
 
 static char program[PATH_MAX];
 
+#if 0
 static inline void read_program_name(const char *path)
 {
     char *str = strdup(path);
@@ -265,6 +266,7 @@ static inline void read_program_name(const char *path)
     sprintf(program, "%s", name);
     free(str);
 }
+#endif
 
 static struct option const long_opts[] = {
     { "all", 0, 0, 'a' },
@@ -315,7 +317,7 @@ int main(int argc, char **argv)
     time_t nowp = 0;
     struct tm *now = NULL;
 
-    read_program_name(argv[0]);
+    read_program_name(argv[0], program);
 
     nowp = time(NULL);
     now = localtime(&nowp);

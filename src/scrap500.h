@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
+#include <libgen.h>
 #include <libxml/HTMLparser.h>
 #include <curl/curl.h>
 
@@ -73,6 +74,14 @@ typedef struct _scrap500_list scrap500_list_t;
 
 extern char *scrap500_datadir;
 
+static inline void read_program_name(const char *path, char *program)
+{
+    char *str = strdup(path);
+    char *name = basename(str);
+
+    sprintf(program, "%s", name);
+    free(str);
+}
 
 static inline
 void scrap500_list_html_filename(scrap500_list_t *list, int page, char *buf)
