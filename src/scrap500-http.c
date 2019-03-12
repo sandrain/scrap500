@@ -179,6 +179,10 @@ static void *site_fetch_func(void *_data)
         }
 
         curl = curl_easy_init();
+        if (!curl) {
+            fprintf(stderr, "curl init failed for %s\n", filename);
+            goto out;
+        }
 
         sprintf(filename, "https://www.top500.org/site/%llu",
                           _llu(rank->site_id));
@@ -198,7 +202,8 @@ static void *site_fetch_func(void *_data)
             goto out;
         }
 
-        curl_easy_cleanup(curl);
+        if (curl)
+            curl_easy_cleanup(curl);
 
         fclose(fp);
     }
@@ -244,6 +249,10 @@ static void *system_fetch_func(void *_data)
         }
 
         curl = curl_easy_init();
+        if (!curl) {
+            fprintf(stderr, "curl init failed for %s\n", filename);
+            goto out;
+        }
 
         sprintf(filename, "https://www.top500.org/system/%llu",
                           _llu(rank->system_id));
@@ -263,7 +272,8 @@ static void *system_fetch_func(void *_data)
             goto out;
         }
 
-        curl_easy_cleanup(curl);
+        if (curl)
+            curl_easy_cleanup(curl);
 
         fclose(fp);
     }
@@ -277,7 +287,7 @@ int scrap500_http_fetch_specs(scrap500_list_t *list)
     int ret = 0;
     int i = 0;
     int nthreads = 5;
-    pthread_t site_worker[5], system_worker[5];
+    pthread_t workers[5];
     worker_data_t data[5];
 
     if (!list)
@@ -288,14 +298,23 @@ int scrap500_http_fetch_specs(scrap500_list_t *list)
         d->range = i;
         d->list = list;
 
-        ret = pthread_create(&site_worker[i], NULL,
+        ret = pthread_create(&workers[i], NULL,
                              site_fetch_func, (void *) d);
         if (ret) {
             perror("failed to create a site fetcher thread");
             goto out;
         }
+    }
 
-        ret = pthread_create(&system_worker[i], NULL,
+    for (i = 0; i < nthreads; i++)
+        ret = pthread_join(workers[i], NULL);
+
+    for (i = 0; i < nthreads; i++) {
+        worker_data_t *d = &data[i];
+        d->range = i;
+        d->list = list;
+
+        ret = pthread_create(&workers[i], NULL,
                              system_fetch_func, (void *) d);
         if (ret) {
             perror("failed to create a site fetcher thread");
@@ -303,10 +322,8 @@ int scrap500_http_fetch_specs(scrap500_list_t *list)
         }
     }
 
-    for (i = 0; i < nthreads; i++) {
-        ret = pthread_join(site_worker[i], NULL);
-        ret = pthread_join(system_worker[i], NULL);
-    }
+    for (i = 0; i < nthreads; i++)
+        ret = pthread_join(workers[i], NULL);
 
 out:
     return ret;

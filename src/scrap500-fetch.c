@@ -200,7 +200,11 @@ int main(int argc, char **argv)
 
     prepare_datadir();
 
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+
     ret = do_fetch();
+
+    curl_global_cleanup();
 
 out:
     return ret;
