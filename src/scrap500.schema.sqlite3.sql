@@ -27,8 +27,9 @@ create table site (
 -- [table] system
 create table system (
     id integer primary key not null,
-    name text not null,
     system_id integer not null,
+    name text not null,
+    summary text,
     manufacturer text,
     url text,
     unique(system_id)
@@ -62,7 +63,7 @@ insert into sysattr_name(id, name) values (16, 'MPI');
 create table sysattr_val (
     id integer primary key not null,
     nid integer not null references sysattr_name(id),
-    sval text,
+    sval text,          -- text value or unit for rval
     rval real,
     unique(id, nid)
 );

@@ -18,6 +18,7 @@
 #include <curl/curl.h>
 
 #define _llu(x)  ((unsigned long long) (x))
+#define __strprint(s)  ((s) ? (s) : "")
 
 struct _scrap500_site {
     uint64_t id;
@@ -39,17 +40,20 @@ static inline void scrap500_site_dump(scrap500_site_t *site)
            "## url: %s\n"
            "## segment: %s\n"
            "## city: %s\n"
-           "## country: %s\n\n",
-           site->name ? site->name : "", _llu(site->id),
-           site->url ? site->url : "",
-           site->segment ? site->segment : "",
-           site->city ? site->city : "",
-           site->country ? site->country : "");
+           "## country: %s\n"
+           "\n",
+           __strprint(site->name), _llu(site->id),
+           __strprint(site->url),
+           __strprint(site->segment),
+           __strprint(site->city),
+           __strprint(site->country));
 }
 
 struct _scrap500_system {
     uint64_t id;
+    uint64_t site_id;
     char *name;
+    char *summary;
     char *url;
     char *manufacturer;
 
@@ -77,6 +81,51 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
 {
     if (!system)
         return;
+
+    printf("\n## system: %s (id=%llu)\n"
+           "## summary: %s\n"
+           "## site_id: %lu\n"
+           "## url: %s\n"
+           "## manufacturer: %s\n"
+           "## cores: %lu\n"
+           "## memory: %lu GB\n"
+           "## processor: %s\n"
+           "## interconnect: %s\n"
+           "## linpack_perf: %.2lf\n"
+           "## theoretical_peak: %.2lf\n"
+           "## nmax: %.2lf\n"
+           "## nhalf: %.2lf\n"
+           "## hpcg: %.2lf\n"
+           "## power: %.2lf\n"
+           "## power_measurement_level: %.2lf\n"
+           "## measured_cores: %.2lf\n"
+           "## os: %s\n"
+           "## compiler: %s\n"
+           "## mathlib: %s\n"
+           "## mpi: %s\n"
+           "\n",
+           __strprint(system->name), _llu(system->id),
+           __strprint(system->summary),
+           system->site_id,
+           __strprint(system->url),
+           __strprint(system->manufacturer),
+           (unsigned long) system->cores,
+           (unsigned long) system->memory,
+           __strprint(system->processor),
+           __strprint(system->interconnect),
+           system->linpack_perf,
+           system->theoretical_peak,
+           system->nmax,
+           system->nhalf,
+           system->hpcg,
+           system->power,
+           system->power_measurement_level,
+           system->measured_cores,
+           __strprint(system->os),
+           __strprint(system->compiler),
+           __strprint(system->mathlib),
+           __strprint(system->mpi));
+
 }
 
 struct _scrap500_rank {
