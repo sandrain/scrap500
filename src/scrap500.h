@@ -50,6 +50,25 @@ static inline void scrap500_site_dump(scrap500_site_t *site)
 struct _scrap500_system {
     uint64_t id;
     char *name;
+    char *url;
+    char *manufacturer;
+
+    double cores;
+    double memory;
+    char *processor;
+    char *interconnect;
+    double linpack_perf;
+    double theoretical_peak;
+    double nmax;
+    double nhalf;
+    double hpcg;
+    double power;
+    double power_measurement_level;
+    double measured_cores;
+    char *os;
+    char *compiler;
+    char *mathlib;
+    char *mpi;
 };
 
 typedef struct _scrap500_system scrap500_system_t;
@@ -59,7 +78,6 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
     if (!system)
         return;
 }
-
 
 struct _scrap500_rank {
     int rank;
