@@ -54,6 +54,13 @@ struct _scrap500_system {
 
 typedef struct _scrap500_system scrap500_system_t;
 
+static inline void scrap500_system_dump(scrap500_system_t *system)
+{
+    if (!system)
+        return;
+}
+
+
 struct _scrap500_rank {
     int rank;
     char *system_name;

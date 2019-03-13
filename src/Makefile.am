@@ -1,5 +1,6 @@
 bin_PROGRAMS = scrap500 \
                scrap500-fetch \
+               scrap500-build \
                getsysattrs
 
 noinst_HEADERS = scrap500.h
@@ -15,6 +16,9 @@ scrap500_SOURCES = scrap500.c \
 
 scrap500_fetch_SOURCES = scrap500-fetch.c \
                          scrap500-http.c \
+                         scrap500-parser.c
+
+scrap500_build_SOURCES = scrap500-build.c \
                          scrap500-parser.c \
                          scrap500-db.c
 
