@@ -97,10 +97,11 @@ static const char *schema_sqlstr =
 "-- [table] sysattr_val\n"
 "create table sysattr_val (\n"
 "    id integer primary key not null,\n"
+"    system_id integer not null references system(system_id),\n"
 "    nid integer not null references sysattr_name(id),\n"
 "    sval text,          -- text value or unit for rval\n"
 "    rval real,\n"
-"    unique(id, nid)\n"
+"    unique(system_id, nid)\n"
 ");\n"
 "\n"
 "-- [table] top500\n"
@@ -125,23 +126,23 @@ static char *sqlstr[] = {
     "insert into system(system_id,name,summary,manufacturer,url)\n"
     "values(?,?,?,?,?);\n",
     /* sysattr */
-    "insert into sysattr_val(nid,sval,rval)\n"
-    "values(1,?,?),\n"
-    "(2,?,?),\n"
-    "(3,?,?),\n"
-    "(4,?,?),\n"
-    "(5,?,?),\n"
-    "(6,?,?),\n"
-    "(7,?,?),\n"
-    "(8,?,?),\n"
-    "(9,?,?),\n"
-    "(10,?,?),\n"
-    "(11,?,?),\n"
-    "(12,?,?),\n"
-    "(13,?,?),\n"
-    "(14,?,?),\n"
-    "(15,?,?),\n"
-    "(16,?,?);\n",
+    "insert into sysattr_val(system_id,nid,sval,rval)\n"
+    "values(?,1,?,?),\n"
+    "(?,2,?,?),\n"
+    "(?,3,?,?),\n"
+    "(?,4,?,?),\n"
+    "(?,5,?,?),\n"
+    "(?,6,?,?),\n"
+    "(?,7,?,?),\n"
+    "(?,8,?,?),\n"
+    "(?,9,?,?),\n"
+    "(?,10,?,?),\n"
+    "(?,11,?,?),\n"
+    "(?,12,?,?),\n"
+    "(?,13,?,?),\n"
+    "(?,14,?,?),\n"
+    "(?,15,?,?),\n"
+    "(?,16,?,?);\n",
     /* top500 */
     "insert into top500(time,rank,system_id,site_id)\n"
     "values(?,?,?,?);\n",
@@ -221,11 +222,11 @@ static int db_insert_site(sqlite3 *dbconn, scrap500_site_t *site)
     stmt = sqlstmts[SQL_SITE];
 
     ret = sqlite3_bind_int64(stmt, 1, site->id);
-    ret |= sqlite3_bind_text(stmt, 2, __strprint(site->name), -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 3, __strprint(site->url), -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 4, __strprint(site->segment), -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 5, __strprint(site->city), -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 6, __strprint(site->country), -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 2, site->name, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 3, site->url, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 4, site->segment, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 5, site->city, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 6, site->country, -1, SQLITE_STATIC);
     if (ret) {
         fprintf(stderr, "failed to bind values: %s\n", sqlite3_errstr(ret));
         goto out;
@@ -235,7 +236,13 @@ static int db_insert_site(sqlite3 *dbconn, scrap500_site_t *site)
         ret = sqlite3_step(stmt);
     } while (ret == SQLITE_BUSY);
 
-    ret = ret == SQLITE_DONE ? 0 : EIO;
+    if (ret != SQLITE_DONE) {
+        fprintf(stderr, "failed to insert site: %s\n", sqlite3_errstr(ret));
+        ret = EIO;
+    }
+    else
+        ret = 0;
+
 out:
     sqlite3_reset(stmt);
     return ret;
@@ -244,19 +251,16 @@ out:
 static int db_insert_system(sqlite3 *dbconn, scrap500_system_t *system)
 {
     int ret = 0;
+    uint64_t system_id = system->id;
     sqlite3_stmt *stmt = NULL;
 
     stmt = sqlstmts[SQL_SYSTEM];
 
-    ret = sqlite3_bind_int64(stmt, 1, system->id);
-    ret |= sqlite3_bind_text(stmt, 2, __strprint(system->name), -1,
-                             SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 2, __strprint(system->summary), -1,
-                             SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 2, __strprint(system->manufacturer), -1,
-                             SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 2, __strprint(system->url), -1, 
-                             SQLITE_STATIC);
+    ret = sqlite3_bind_int64(stmt, 1, system_id);
+    ret |= sqlite3_bind_text(stmt, 2, system->name, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 3, system->summary, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 4, system->manufacturer, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, 5, system->url, -1, SQLITE_STATIC);
     if (ret) {
         fprintf(stderr, "failed to bind values: %s\n", sqlite3_errstr(ret));
         goto out;
@@ -266,7 +270,13 @@ static int db_insert_system(sqlite3 *dbconn, scrap500_system_t *system)
         ret = sqlite3_step(stmt);
     } while (ret == SQLITE_BUSY);
 
-    ret = ret == SQLITE_DONE ? 0 : EIO;
+    if (ret != SQLITE_DONE) {
+        fprintf(stderr, "failed to insert system: %s\n", sqlite3_errstr(ret));
+        ret = EIO;
+    }
+    else
+        ret = 0;
+
 out:
     sqlite3_reset(stmt);
     return ret;
@@ -276,40 +286,72 @@ static int db_insert_sysattrs(sqlite3 *dbconn, scrap500_system_t *system)
 {
     int ret = 0;
     int n = 1;
+    uint64_t system_id = system->id;
     sqlite3_stmt *stmt = NULL;
 
     stmt = sqlstmts[SQL_SYSATTR];
 
-    ret = sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
+    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->cores);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->memory);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, system->processor, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, .0f);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, system->interconnect, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, .0f);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->linpack_perf);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->theoretical_peak);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->nmax);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->nhalf);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->hpcg);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->power);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->power_measurement_level);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->measured_cores);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, system->os, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, .0f);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, system->compiler, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, .0f);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, system->mathlib, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, .0f);
+
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
     ret |= sqlite3_bind_text(stmt, n++, system->mpi, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, .0f);
 
@@ -322,9 +364,60 @@ static int db_insert_sysattrs(sqlite3 *dbconn, scrap500_system_t *system)
         ret = sqlite3_step(stmt);
     } while (ret == SQLITE_BUSY);
 
-    ret = ret == SQLITE_DONE ? 0 : EIO;
+    if (ret != SQLITE_DONE) {
+        fprintf(stderr, "failed to insert system attributes: %s\n",
+                        sqlite3_errstr(ret));
+        ret = EIO;
+    }
+    else
+        ret = 0;
+
 out:
     sqlite3_reset(stmt);
+    return ret;
+}
+
+static int db_insert_list(sqlite3 *dbconn, scrap500_list_t *list)
+{
+    int ret = 0;
+    int i = 0;
+    uint64_t list_id = list->id;
+    scrap500_rank_t *rank = NULL;
+    sqlite3_stmt *stmt = NULL;
+
+    stmt = sqlstmts[SQL_TOP500];
+
+    for (i = 0; i < 500; i++) {
+        rank = &list->rank[i];
+
+        ret = sqlite3_bind_int64(stmt, 1, list_id);
+        ret |= sqlite3_bind_int(stmt, 2, i+1);
+        ret |= sqlite3_bind_int64(stmt, 3, rank->system_id);
+        ret |= sqlite3_bind_int64(stmt, 4, rank->site_id);
+        if (ret) {
+            fprintf(stderr, "failed to bind values: %s\n",
+                            sqlite3_errstr(ret));
+            ret = EIO;
+            goto out;
+        }
+
+        do {
+            ret = sqlite3_step(stmt);
+        } while (ret == SQLITE_BUSY);
+
+        sqlite3_reset(stmt);
+
+        if (ret != SQLITE_DONE) {
+            fprintf(stderr, "failed to insert values: %s\n",
+                            sqlite3_errstr(ret));
+            ret = EIO;
+            goto out;
+        }
+        else
+            ret = 0;
+    }
+
+out:
     return ret;
 }
 
@@ -384,6 +477,14 @@ static int populate_site(void)
         if (pos[0] != '.')
             continue;
 
+        count++;
+
+        scrap500_site_reset(&site);
+        site.id = site_id;
+
+        printf("## processing site %llu, total %8llu\n",
+               _llu(site_id), _llu(count));
+
         ret = scrap500_parser_parse_site(site_id, &site);
         if (ret) {
             fprintf(stderr, "failed to parse the site data.\n");
@@ -395,11 +496,6 @@ static int populate_site(void)
             fprintf(stderr, "failed to insert the site data.\n");
             goto out_close;
         }
-
-        count++;
-
-        printf("## processing site %llu, total %8llu\n",
-               _llu(site_id), _llu(count));
     }
 
     printf("\n## processed %llu site records\n", _llu(count));
@@ -435,6 +531,8 @@ static int populate_system(void)
         goto out;
     }
 
+    begin_transaction(db);
+
     while ((dp = readdir(dirp)) != NULL) {
         if (dp->d_name[0] == '.')
             continue;
@@ -442,6 +540,14 @@ static int populate_system(void)
         system_id = strtoull(dp->d_name, &pos, 0);
         if (pos[0] != '.')
             continue;
+
+        count++;
+
+        printf("## processing system %llu, total %8llu\n",
+               _llu(system_id), _llu(count));
+
+        scrap500_system_reset(&system);
+        system.id = system_id;
 
         ret = scrap500_parser_parse_system(system_id, &system);
         if (ret) {
@@ -460,17 +566,49 @@ static int populate_system(void)
             fprintf(stderr, "failed to insert the system attributes.\n");
             goto out_close;
         }
-
-        count++;
-
-        printf("## processing system %llu, total %8llu\n",
-               _llu(system_id), _llu(count));
     }
 
     printf("\n## processed %llu system records\n", _llu(count));
 
 out_close:
+    if (ret)
+        rollback_transaction(db);
+    else
+        end_transaction(db);
+
     closedir(dirp);
+out:
+    return ret;
+}
+
+static inline int get_list_ids(uint64_t **_ids, uint64_t *_count)
+{
+    int ret = 0;
+    int i = 0;
+    int count = 0;
+    uint64_t id = 0;
+    uint64_t *ids = NULL;
+    time_t nowp = time(NULL);
+    struct tm *now = localtime(&nowp);
+
+    count = 2*((now->tm_year + 1900) - 1993);
+
+    ids = calloc(count, sizeof(*ids));
+    if (!ids) {
+        perror("failed to allocate list ids");
+        ret = errno;
+        goto out;
+    }
+
+    for (i = 0; i < count; i += 2) {
+        id = (1993 + i/2)*100;
+        ids[i] = id + 6;
+        ids[i+1] = id + 11;
+    }
+
+    *_ids = ids;
+    *_count = count;
+
 out:
     return ret;
 }
@@ -478,6 +616,47 @@ out:
 static int populate_list(void)
 {
     int ret = 0;
+    uint64_t i = 0;
+    uint64_t count = 0;
+    uint64_t *ids = NULL;
+    uint64_t list_id = 0;
+    scrap500_list_t list = { 0, };
+
+    ret = get_list_ids(&ids, &count);
+    if (ret) {
+        fprintf(stderr, "failed to get the list ids\n");
+        goto out;
+    }
+
+    begin_transaction(db);
+
+    for (i = 0; i < count; i++) {
+        list_id = ids[i];
+        list.id = list_id;
+
+        printf("## processing list %llu, total %8llu\n",
+               _llu(list_id), _llu(i+1));
+
+        ret = scrap500_parser_parse_list(&list);
+        if (ret) {
+            fprintf(stderr, "failed to parse list %llu\n", _llu(list_id));
+            goto out_close;
+        }
+
+        ret = db_insert_list(db, &list);
+        if (ret) {
+            fprintf(stderr, "failed to insert the list.\n");
+            goto out_close;
+        }
+    }
+
+    printf("\n## processed %llu lists\n", _llu(count));
+
+out_close:
+    if (ret)
+        rollback_transaction(db);
+    else
+        end_transaction(db);
 
 out:
     return ret;
@@ -557,7 +736,7 @@ int main(int argc, char **argv)
         goto out;
     }
 
-    if (!output)
+    if (output[0] == '\0')
         sprintf(output, "%s/scrap500.db", scrap500_datadir);
 
     db = db_init(output);

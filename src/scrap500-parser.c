@@ -57,6 +57,8 @@ static int parse_number(const char *str, double *val)
     char buf[512] = { 0, };
     const char *pos = NULL;
 
+    errno = 0;
+
     for (pos = str; *pos != '\0'; pos++) {
         if (pos[0] == ',')
             continue;

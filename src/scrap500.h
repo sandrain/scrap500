@@ -11,6 +11,7 @@
 #include <config.h>
 
 #include <stdint.h>
+#include <string.h>
 #include <errno.h>
 #include <pthread.h>
 #include <libgen.h>
@@ -30,6 +31,24 @@ struct _scrap500_site {
 };
 
 typedef struct _scrap500_site scrap500_site_t;
+
+static inline void scrap500_site_reset(scrap500_site_t *site)
+{
+    if (site) {
+        if (site->name)
+            free(site->name);
+        if (site->url)
+            free(site->url);
+        if (site->segment)
+            free(site->segment);
+        if (site->city)
+            free(site->city);
+        if (site->country)
+            free(site->country);
+
+        memset((void *) site, 0, sizeof(*site));
+    }
+}
 
 static inline void scrap500_site_dump(scrap500_site_t *site)
 {
@@ -77,6 +96,35 @@ struct _scrap500_system {
 
 typedef struct _scrap500_system scrap500_system_t;
 
+static inline void scrap500_system_reset(scrap500_system_t *system)
+{
+    if (system) {
+        if (system->name)
+            free(system->name);
+        if (system->summary)
+            free(system->summary);
+        if (system->url)
+            free(system->url);
+        if (system->manufacturer)
+            free(system->manufacturer);
+        if (system->processor)
+            free(system->processor);
+        if (system->interconnect)
+            free(system->interconnect);
+        if (system->os)
+            free(system->os);
+        if (system->compiler)
+            free(system->compiler);
+        if (system->mathlib)
+            free(system->mathlib);
+        if (system->mpi)
+            free(system->mpi);
+
+        memset((void *) system, 0, sizeof(*system));
+    }
+}
+
+
 static inline void scrap500_system_dump(scrap500_system_t *system)
 {
     if (!system)
@@ -84,7 +132,7 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
 
     printf("\n## system: %s (id=%llu)\n"
            "## summary: %s\n"
-           "## site_id: %lu\n"
+           "## site_id: %llu\n"
            "## url: %s\n"
            "## manufacturer: %s\n"
            "## cores: %lu\n"
@@ -106,7 +154,7 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
            "\n",
            __strprint(system->name), _llu(system->id),
            __strprint(system->summary),
-           system->site_id,
+           _llu(system->site_id),
            __strprint(system->url),
            __strprint(system->manufacturer),
            (unsigned long) system->cores,
