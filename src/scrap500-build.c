@@ -32,7 +32,90 @@ enum {
     N_SQLS,
 };
 
-extern const char *schema_sqlstr;
+static const char *schema_sqlstr =
+"--\n"
+"-- scrap500.schema.sqlite3.sql\n"
+"--\n"
+"\n"
+"pragma foreign_keys = on;\n"
+"\n"
+"begin transaction;\n"
+"\n"
+"drop table if exists site;\n"
+"drop table if exists system;\n"
+"drop table if exists sysattr_name;\n"
+"drop table if exists sysattr_val;\n"
+"drop table if exists top500;\n"
+"\n"
+"-- [table] site\n"
+"create table site (\n"
+"    id integer primary key not null,\n"
+"    site_id integer not null,\n"
+"    name text,\n"
+"    url text,\n"
+"    segment text,\n"
+"    city text,\n"
+"    country text,\n"
+"    unique(site_id)\n"
+");\n"
+"\n"
+"-- [table] system\n"
+"create table system (\n"
+"    id integer primary key not null,\n"
+"    system_id integer not null,\n"
+"    name text not null,\n"
+"    summary text,\n"
+"    manufacturer text,\n"
+"    url text,\n"
+"    unique(system_id)\n"
+");\n"
+"\n"
+"-- [table] sysattr_name\n"
+"create table sysattr_name (\n"
+"    id integer primary key not null,\n"
+"    name text not null,\n"
+"    unique(name)\n"
+");\n"
+"\n"
+"insert into sysattr_name(id, name) values (1, 'Cores');\n"
+"insert into sysattr_name(id, name) values (2, 'Memory');\n"
+"insert into sysattr_name(id, name) values (3, 'Processor');\n"
+"insert into sysattr_name(id, name) values (4, 'Interconnect');\n"
+"insert into sysattr_name(id, name) values (5, 'Linpack Performance (Rmax)');\n"
+"insert into sysattr_name(id, name) values (6, 'Theoretical Peak (Rpeak)');\n"
+"insert into sysattr_name(id, name) values (7, 'Nmax');\n"
+"insert into sysattr_name(id, name) values (8, 'Nhalf');\n"
+"insert into sysattr_name(id, name) values (9, 'HPCG [TFlop/s]');\n"
+"insert into sysattr_name(id, name) values (10, 'Power');\n"
+"insert into sysattr_name(id, name) values (11, 'Power Measurement Level');\n"
+"insert into sysattr_name(id, name) values (12, 'Measured Cores');\n"
+"insert into sysattr_name(id, name) values (13, 'Operating System');\n"
+"insert into sysattr_name(id, name) values (14, 'Compiler');\n"
+"insert into sysattr_name(id, name) values (15, 'Math Library');\n"
+"insert into sysattr_name(id, name) values (16, 'MPI');\n"
+"\n"
+"-- [table] sysattr_val\n"
+"create table sysattr_val (\n"
+"    id integer primary key not null,\n"
+"    nid integer not null references sysattr_name(id),\n"
+"    sval text,          -- text value or unit for rval\n"
+"    rval real,\n"
+"    unique(id, nid)\n"
+");\n"
+"\n"
+"-- [table] top500\n"
+"create table top500 (\n"
+"    id integer primary key not null,\n"
+"    time integer not null,\n"
+"    rank integer not null,\n"
+"    system_id integer not null references system(system_id),\n"
+"    site_id integer not null references site(site_id),\n"
+"    unique(time, rank, system_id)   -- there exist ties in rank\n"
+");\n"
+"\n"
+"end transaction;\n"
+"\n"
+;
 
 static char *sqlstr[] = {
     /* site */
@@ -44,21 +127,21 @@ static char *sqlstr[] = {
     /* sysattr */
     "insert into sysattr_val(nid,sval,rval)\n"
     "values(1,?,?),\n"
-    "values(2,?,?),\n"
-    "values(3,?,?),\n"
-    "values(4,?,?),\n"
-    "values(5,?,?),\n"
-    "values(6,?,?),\n"
-    "values(7,?,?),\n"
-    "values(8,?,?),\n"
-    "values(9,?,?),\n"
-    "values(10,?,?),\n"
-    "values(11,?,?),\n"
-    "values(12,?,?),\n"
-    "values(13,?,?),\n"
-    "values(14,?,?),\n"
-    "values(15,?,?),\n"
-    "values(16,?,?);\n",
+    "(2,?,?),\n"
+    "(3,?,?),\n"
+    "(4,?,?),\n"
+    "(5,?,?),\n"
+    "(6,?,?),\n"
+    "(7,?,?),\n"
+    "(8,?,?),\n"
+    "(9,?,?),\n"
+    "(10,?,?),\n"
+    "(11,?,?),\n"
+    "(12,?,?),\n"
+    "(13,?,?),\n"
+    "(14,?,?),\n"
+    "(15,?,?),\n"
+    "(16,?,?);\n",
     /* top500 */
     "insert into top500(time,rank,system_id,site_id)\n"
     "values(?,?,?,?);\n",
@@ -150,7 +233,7 @@ static int db_insert_site(sqlite3 *dbconn, scrap500_site_t *site)
 
     do {
         ret = sqlite3_step(stmt);
-    } while (ret = SQLITE_BUSY);
+    } while (ret == SQLITE_BUSY);
 
     ret = ret == SQLITE_DONE ? 0 : EIO;
 out:
@@ -181,7 +264,7 @@ static int db_insert_system(sqlite3 *dbconn, scrap500_system_t *system)
 
     do {
         ret = sqlite3_step(stmt);
-    } while (ret = SQLITE_BUSY);
+    } while (ret == SQLITE_BUSY);
 
     ret = ret == SQLITE_DONE ? 0 : EIO;
 out:
@@ -195,13 +278,15 @@ static int db_insert_sysattrs(sqlite3 *dbconn, scrap500_system_t *system)
     int n = 1;
     sqlite3_stmt *stmt = NULL;
 
-    stmt = sqlstmts[SQL_SYSTEM];
+    stmt = sqlstmts[SQL_SYSATTR];
 
     ret = sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->cores);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->memory);
     ret |= sqlite3_bind_text(stmt, n++, system->processor, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_double(stmt, n++, .0f);
+    ret |= sqlite3_bind_text(stmt, n++, system->interconnect, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, .0f);
     ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->linpack_perf);
@@ -235,7 +320,7 @@ static int db_insert_sysattrs(sqlite3 *dbconn, scrap500_system_t *system)
 
     do {
         ret = sqlite3_step(stmt);
-    } while (ret = SQLITE_BUSY);
+    } while (ret == SQLITE_BUSY);
 
     ret = ret == SQLITE_DONE ? 0 : EIO;
 out:
@@ -312,9 +397,12 @@ static int populate_site(void)
         }
 
         count++;
+
+        printf("## processing site %llu, total %8llu\n",
+               _llu(site_id), _llu(count));
     }
 
-    printf("processed %llu site records\n", _llu(count));
+    printf("\n## processed %llu site records\n", _llu(count));
 
 out_close:
     if (ret)
@@ -374,9 +462,12 @@ static int populate_system(void)
         }
 
         count++;
+
+        printf("## processing system %llu, total %8llu\n",
+               _llu(system_id), _llu(count));
     }
 
-    printf("processed %llu system records\n", _llu(count));
+    printf("\n## processed %llu system records\n", _llu(count));
 
 out_close:
     closedir(dirp);

@@ -594,8 +594,6 @@ static int parse_system_table(scrap500_system_t *system, xmlNode *table)
         }
     }
 
-    printf("%d attributes found\n", count);
-
 out:
     return ret;
 }
