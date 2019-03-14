@@ -24,14 +24,6 @@ static uint64_t system_id;
 
 static sqlite3 *db;
 
-enum {
-    SQL_SITE = 0,
-    SQL_SYSTEM,
-    SQL_SYSATTR,
-    SQL_TOP500,
-    N_SQLS,
-};
-
 static const char *schema_sqlstr =
 "--\n"
 "-- scrap500.schema.sqlite3.sql\n"
@@ -63,13 +55,31 @@ static const char *schema_sqlstr =
 "create table system (\n"
 "    id integer primary key not null,\n"
 "    system_id integer not null,\n"
-"    name text not null,\n"
+"    site_id integer not null references site(site_id),\n"
+"    name text,\n"
 "    summary text,\n"
 "    manufacturer text,\n"
 "    url text,\n"
+"    cores real,\n"
+"    memory real,\n"
+"    processor text,\n"
+"    interconnect text,\n"
+"    linpack real,\n"
+"    tpeak real,\n"
+"    nmax real,\n"
+"    nhalf real,\n"
+"    hpcg real,\n"
+"    power real,\n"
+"    pml real,\n"
+"    mcores real,\n"
+"    os text,\n"
+"    compiler text,\n"
+"    mathlib text,\n"
+"    mpi text,\n"
 "    unique(system_id)\n"
 ");\n"
 "\n"
+#if 0
 "-- [table] sysattr_name\n"
 "create table sysattr_name (\n"
 "    id integer primary key not null,\n"
@@ -104,6 +114,7 @@ static const char *schema_sqlstr =
 "    unique(system_id, nid)\n"
 ");\n"
 "\n"
+#endif
 "-- [table] top500\n"
 "create table top500 (\n"
 "    id integer primary key not null,\n"
@@ -115,16 +126,25 @@ static const char *schema_sqlstr =
 ");\n"
 "\n"
 "end transaction;\n"
-"\n"
-;
+"\n";
+
+enum {
+    SQL_SITE = 0,
+    SQL_SYSTEM,
+    SQL_TOP500,
+    N_SQLS,
+};
 
 static char *sqlstr[] = {
     /* site */
     "insert into site(site_id,name,url,segment,city,country)\n"
     "values(?,?,?,?,?,?);\n",
     /* system */
-    "insert into system(system_id,name,summary,manufacturer,url)\n"
-    "values(?,?,?,?,?);\n",
+    "insert into system(system_id,name,summary,manufacturer,url,\n"
+    "cores,memory,processor,interconnect,linpack,tpeak,nmax,nhalf,hpcg,\n"
+    "power,pml,mcores,os,compiler,mathlib,mpi)\n"
+    "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);\n",
+#if 0
     /* sysattr */
     "insert into sysattr_val(system_id,nid,sval,rval)\n"
     "values(?,1,?,?),\n"
@@ -143,6 +163,7 @@ static char *sqlstr[] = {
     "(?,14,?,?),\n"
     "(?,15,?,?),\n"
     "(?,16,?,?);\n",
+#endif
     /* top500 */
     "insert into top500(time,rank,system_id,site_id)\n"
     "values(?,?,?,?);\n",
@@ -251,16 +272,33 @@ out:
 static int db_insert_system(sqlite3 *dbconn, scrap500_system_t *system)
 {
     int ret = 0;
+    int n = 1;
     uint64_t system_id = system->id;
     sqlite3_stmt *stmt = NULL;
 
     stmt = sqlstmts[SQL_SYSTEM];
 
-    ret = sqlite3_bind_int64(stmt, 1, system_id);
-    ret |= sqlite3_bind_text(stmt, 2, system->name, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 3, system->summary, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 4, system->manufacturer, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, 5, system->url, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_int64(stmt, n++, system_id);
+    ret |= sqlite3_bind_text(stmt, n++, system->name, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, n++, system->summary, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, n++, system->manufacturer, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, n++, system->url, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_double(stmt, n++, system->cores);
+    ret |= sqlite3_bind_double(stmt, n++, system->memory);
+    ret |= sqlite3_bind_text(stmt, n++, system->processor, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, n++, system->interconnect, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_double(stmt, n++, system->linpack);
+    ret |= sqlite3_bind_double(stmt, n++, system->tpeak);
+    ret |= sqlite3_bind_double(stmt, n++, system->nmax);
+    ret |= sqlite3_bind_double(stmt, n++, system->nhalf);
+    ret |= sqlite3_bind_double(stmt, n++, system->hpcg);
+    ret |= sqlite3_bind_double(stmt, n++, system->power);
+    ret |= sqlite3_bind_double(stmt, n++, system->pml);
+    ret |= sqlite3_bind_double(stmt, n++, system->mcores);
+    ret |= sqlite3_bind_text(stmt, n++, system->os, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, n++, system->compiler, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, n++, system->mathlib, -1, SQLITE_STATIC);
+    ret |= sqlite3_bind_text(stmt, n++, system->mpi, -1, SQLITE_STATIC);
     if (ret) {
         fprintf(stderr, "failed to bind values: %s\n", sqlite3_errstr(ret));
         goto out;
@@ -282,6 +320,7 @@ out:
     return ret;
 }
 
+#if 0
 static int db_insert_sysattrs(sqlite3 *dbconn, scrap500_system_t *system)
 {
     int ret = 0;
@@ -376,6 +415,7 @@ out:
     sqlite3_reset(stmt);
     return ret;
 }
+#endif
 
 static int db_insert_list(sqlite3 *dbconn, scrap500_list_t *list)
 {
@@ -561,11 +601,13 @@ static int populate_system(void)
             goto out_close;
         }
 
+#if 0
         ret = db_insert_sysattrs(db, &system);
         if (ret) {
             fprintf(stderr, "failed to insert the system attributes.\n");
             goto out_close;
         }
+#endif
     }
 
     printf("\n## processed %llu system records\n", _llu(count));

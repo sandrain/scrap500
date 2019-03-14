@@ -156,7 +156,8 @@ static void *site_fetch_func(void *_data)
     CURL *curl = NULL;
     CURLcode cc = 0;
 
-    for (i = range*100; i < range*100+100; i++) {
+//    for (i = range*100; i < range*100+100; i++) {
+    for (i = 0; i < 500; i++) {
         rank = &list->rank[i];
         scrap500_site_html_filename(rank->site_id, filename);
 
@@ -226,7 +227,8 @@ static void *system_fetch_func(void *_data)
     CURL *curl = NULL;
     CURLcode cc = 0;
 
-    for (i = range*100; i < range*100+100; i++) {
+//    for (i = range*100; i < range*100+100; i++) {
+    for (i = 0; i < 500; i++) {
         rank = &list->rank[i];
         scrap500_system_html_filename(rank->system_id, filename);
 
@@ -286,13 +288,23 @@ int scrap500_http_fetch_specs(scrap500_list_t *list)
 {
     int ret = 0;
     int i = 0;
+#if 0
     int nthreads = 5;
     pthread_t workers[5];
     worker_data_t data[5];
+#endif
+    worker_data_t data = { 0, };
 
     if (!list)
         return EINVAL;
 
+    data.range = 0;
+    data.list = list;
+
+    site_fetch_func((void *) &data);
+    system_fetch_func((void *) &data);
+
+#if 0
     for (i = 0; i < nthreads; i++) {
         worker_data_t *d = &data[i];
         d->range = i;
@@ -324,6 +336,7 @@ int scrap500_http_fetch_specs(scrap500_list_t *list)
 
     for (i = 0; i < nthreads; i++)
         ret = pthread_join(workers[i], NULL);
+#endif
 
 out:
     return ret;

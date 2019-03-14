@@ -28,6 +28,7 @@ create table site (
 create table system (
     id integer primary key not null,
     system_id integer not null,
+    site_id integer not null references site(site_id),
     name text not null,
     summary text,
     manufacturer text,

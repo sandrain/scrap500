@@ -80,14 +80,14 @@ struct _scrap500_system {
     double memory;
     char *processor;
     char *interconnect;
-    double linpack_perf;
-    double theoretical_peak;
+    double linpack;
+    double tpeak;
     double nmax;
     double nhalf;
     double hpcg;
     double power;
-    double power_measurement_level;
-    double measured_cores;
+    double pml;
+    double mcores;
     char *os;
     char *compiler;
     char *mathlib;
@@ -139,14 +139,14 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
            "## memory: %lu GB\n"
            "## processor: %s\n"
            "## interconnect: %s\n"
-           "## linpack_perf: %.2lf\n"
-           "## theoretical_peak: %.2lf\n"
+           "## linpack: %.2lf\n"
+           "## tpeak: %.2lf\n"
            "## nmax: %.2lf\n"
            "## nhalf: %.2lf\n"
            "## hpcg: %.2lf\n"
            "## power: %.2lf\n"
-           "## power_measurement_level: %.2lf\n"
-           "## measured_cores: %.2lf\n"
+           "## pml: %.2lf\n"
+           "## mcores: %.2lf\n"
            "## os: %s\n"
            "## compiler: %s\n"
            "## mathlib: %s\n"
@@ -161,14 +161,14 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
            (unsigned long) system->memory,
            __strprint(system->processor),
            __strprint(system->interconnect),
-           system->linpack_perf,
-           system->theoretical_peak,
+           system->linpack,
+           system->tpeak,
            system->nmax,
            system->nhalf,
            system->hpcg,
            system->power,
-           system->power_measurement_level,
-           system->measured_cores,
+           system->pml,
+           system->mcores,
            __strprint(system->os),
            __strprint(system->compiler),
            __strprint(system->mathlib),

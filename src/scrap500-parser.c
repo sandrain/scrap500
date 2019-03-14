@@ -155,6 +155,7 @@ static inline int parse_system_name(scrap500_system_t *system, const char *str)
 
     if (!pos) { /* only name without summary */
         system->name = strtrim_dup(buf);
+        system->summary = system->name;
         goto out;
     }
 
@@ -325,7 +326,7 @@ static int parse_sysattr_linpack(scrap500_system_t *system, xmlNode *td)
         if (ret)
             fprintf(stderr, "cannot parse %s: %s\n", str, strerror(ret));
         else
-            system->linpack_perf = val;
+            system->linpack = val;
     }
 
     return ret;
@@ -343,7 +344,7 @@ static int parse_sysattr_tpeak(scrap500_system_t *system, xmlNode *td)
         if (ret)
             fprintf(stderr, "cannot parse %s: %s\n", str, strerror(ret));
         else
-            system->theoretical_peak = val;
+            system->tpeak = val;
     }
 
     return ret;
@@ -433,7 +434,7 @@ static int parse_sysattr_pml(scrap500_system_t *system, xmlNode *td)
         if (ret)
             fprintf(stderr, "cannot parse %s: %s\n", str, strerror(ret));
         else
-            system->power_measurement_level = val;
+            system->pml = val;
     }
 
     return ret;
@@ -451,7 +452,7 @@ static int parse_sysattr_mcores(scrap500_system_t *system, xmlNode *td)
         if (ret)
             fprintf(stderr, "cannot parse %s: %s\n", str, strerror(ret));
         else
-            system->measured_cores = val;
+            system->mcores = val;
     }
 
     return ret;
