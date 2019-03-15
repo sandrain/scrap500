@@ -57,7 +57,6 @@ static const char *schema_sqlstr =
 "    system_id integer not null,\n"
 "    site_id integer not null references site(site_id),\n"
 "    name text,\n"
-"    summary text,\n"
 "    manufacturer text,\n"
 "    url text,\n"
 "    cores real,\n"
@@ -79,42 +78,6 @@ static const char *schema_sqlstr =
 "    unique(system_id)\n"
 ");\n"
 "\n"
-#if 0
-"-- [table] sysattr_name\n"
-"create table sysattr_name (\n"
-"    id integer primary key not null,\n"
-"    name text not null,\n"
-"    unique(name)\n"
-");\n"
-"\n"
-"insert into sysattr_name(id, name) values (1, 'Cores');\n"
-"insert into sysattr_name(id, name) values (2, 'Memory');\n"
-"insert into sysattr_name(id, name) values (3, 'Processor');\n"
-"insert into sysattr_name(id, name) values (4, 'Interconnect');\n"
-"insert into sysattr_name(id, name) values (5, 'Linpack Performance (Rmax)');\n"
-"insert into sysattr_name(id, name) values (6, 'Theoretical Peak (Rpeak)');\n"
-"insert into sysattr_name(id, name) values (7, 'Nmax');\n"
-"insert into sysattr_name(id, name) values (8, 'Nhalf');\n"
-"insert into sysattr_name(id, name) values (9, 'HPCG [TFlop/s]');\n"
-"insert into sysattr_name(id, name) values (10, 'Power');\n"
-"insert into sysattr_name(id, name) values (11, 'Power Measurement Level');\n"
-"insert into sysattr_name(id, name) values (12, 'Measured Cores');\n"
-"insert into sysattr_name(id, name) values (13, 'Operating System');\n"
-"insert into sysattr_name(id, name) values (14, 'Compiler');\n"
-"insert into sysattr_name(id, name) values (15, 'Math Library');\n"
-"insert into sysattr_name(id, name) values (16, 'MPI');\n"
-"\n"
-"-- [table] sysattr_val\n"
-"create table sysattr_val (\n"
-"    id integer primary key not null,\n"
-"    system_id integer not null references system(system_id),\n"
-"    nid integer not null references sysattr_name(id),\n"
-"    sval text,          -- text value or unit for rval\n"
-"    rval real,\n"
-"    unique(system_id, nid)\n"
-");\n"
-"\n"
-#endif
 "-- [table] top500\n"
 "create table top500 (\n"
 "    id integer primary key not null,\n"
@@ -140,30 +103,10 @@ static char *sqlstr[] = {
     "insert into site(site_id,name,url,segment,city,country)\n"
     "values(?,?,?,?,?,?);\n",
     /* system */
-    "insert into system(system_id,name,summary,manufacturer,url,\n"
+    "insert into system(system_id,site_id,name,manufacturer,url,\n"
     "cores,memory,processor,interconnect,linpack,tpeak,nmax,nhalf,hpcg,\n"
     "power,pml,mcores,os,compiler,mathlib,mpi)\n"
     "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);\n",
-#if 0
-    /* sysattr */
-    "insert into sysattr_val(system_id,nid,sval,rval)\n"
-    "values(?,1,?,?),\n"
-    "(?,2,?,?),\n"
-    "(?,3,?,?),\n"
-    "(?,4,?,?),\n"
-    "(?,5,?,?),\n"
-    "(?,6,?,?),\n"
-    "(?,7,?,?),\n"
-    "(?,8,?,?),\n"
-    "(?,9,?,?),\n"
-    "(?,10,?,?),\n"
-    "(?,11,?,?),\n"
-    "(?,12,?,?),\n"
-    "(?,13,?,?),\n"
-    "(?,14,?,?),\n"
-    "(?,15,?,?),\n"
-    "(?,16,?,?);\n",
-#endif
     /* top500 */
     "insert into top500(time,rank,system_id,site_id)\n"
     "values(?,?,?,?);\n",
@@ -279,8 +222,8 @@ static int db_insert_system(sqlite3 *dbconn, scrap500_system_t *system)
     stmt = sqlstmts[SQL_SYSTEM];
 
     ret |= sqlite3_bind_int64(stmt, n++, system_id);
+    ret |= sqlite3_bind_int64(stmt, n++, system->site_id);
     ret |= sqlite3_bind_text(stmt, n++, system->name, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_text(stmt, n++, system->summary, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_text(stmt, n++, system->manufacturer, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_text(stmt, n++, system->url, -1, SQLITE_STATIC);
     ret |= sqlite3_bind_double(stmt, n++, system->cores);
@@ -319,103 +262,6 @@ out:
     sqlite3_reset(stmt);
     return ret;
 }
-
-#if 0
-static int db_insert_sysattrs(sqlite3 *dbconn, scrap500_system_t *system)
-{
-    int ret = 0;
-    int n = 1;
-    uint64_t system_id = system->id;
-    sqlite3_stmt *stmt = NULL;
-
-    stmt = sqlstmts[SQL_SYSATTR];
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->cores);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->memory);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, system->processor, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, .0f);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, system->interconnect, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, .0f);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->linpack_perf);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->theoretical_peak);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->nmax);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->nhalf);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->hpcg);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->power);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->power_measurement_level);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, "", -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, system->measured_cores);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, system->os, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, .0f);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, system->compiler, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, .0f);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, system->mathlib, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, .0f);
-
-    ret |= sqlite3_bind_int64(stmt, n++, system_id);
-    ret |= sqlite3_bind_text(stmt, n++, system->mpi, -1, SQLITE_STATIC);
-    ret |= sqlite3_bind_double(stmt, n++, .0f);
-
-    if (ret) {
-        fprintf(stderr, "failed to bind values: %s\n", sqlite3_errstr(ret));
-        goto out;
-    }
-
-    do {
-        ret = sqlite3_step(stmt);
-    } while (ret == SQLITE_BUSY);
-
-    if (ret != SQLITE_DONE) {
-        fprintf(stderr, "failed to insert system attributes: %s\n",
-                        sqlite3_errstr(ret));
-        ret = EIO;
-    }
-    else
-        ret = 0;
-
-out:
-    sqlite3_reset(stmt);
-    return ret;
-}
-#endif
 
 static int db_insert_list(sqlite3 *dbconn, scrap500_list_t *list)
 {
@@ -600,14 +446,6 @@ static int populate_system(void)
             fprintf(stderr, "failed to insert the system data.\n");
             goto out_close;
         }
-
-#if 0
-        ret = db_insert_sysattrs(db, &system);
-        if (ret) {
-            fprintf(stderr, "failed to insert the system attributes.\n");
-            goto out_close;
-        }
-#endif
     }
 
     printf("\n## processed %llu system records\n", _llu(count));

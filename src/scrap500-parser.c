@@ -151,6 +151,7 @@ static inline int parse_system_name(scrap500_system_t *system, const char *str)
 
     sprintf(buf, "%s", str);
 
+#if 0
     pos = strstr(buf, " - ");
 
     if (!pos) { /* only name without summary */
@@ -163,6 +164,8 @@ static inline int parse_system_name(scrap500_system_t *system, const char *str)
 
     system->name = strtrim_dup(buf);
     system->summary = strtrim_dup(&pos[2]);
+#endif
+    system->name = strtrim_dup(buf);
 
 out:
     return 0;

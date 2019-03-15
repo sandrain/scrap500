@@ -72,7 +72,6 @@ struct _scrap500_system {
     uint64_t id;
     uint64_t site_id;
     char *name;
-    char *summary;
     char *url;
     char *manufacturer;
 
@@ -101,8 +100,6 @@ static inline void scrap500_system_reset(scrap500_system_t *system)
     if (system) {
         if (system->name)
             free(system->name);
-        if (system->summary)
-            free(system->summary);
         if (system->url)
             free(system->url);
         if (system->manufacturer)
@@ -131,7 +128,6 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
         return;
 
     printf("\n## system: %s (id=%llu)\n"
-           "## summary: %s\n"
            "## site_id: %llu\n"
            "## url: %s\n"
            "## manufacturer: %s\n"
@@ -153,7 +149,6 @@ static inline void scrap500_system_dump(scrap500_system_t *system)
            "## mpi: %s\n"
            "\n",
            __strprint(system->name), _llu(system->id),
-           __strprint(system->summary),
            _llu(system->site_id),
            __strprint(system->url),
            __strprint(system->manufacturer),
