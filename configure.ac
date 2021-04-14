@@ -22,20 +22,15 @@ AC_PROG_RANLIB
 AC_PROG_LIBTOOL
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdint.h stdlib.h string.h unistd.h])
+AC_CHECK_HEADERS([limits.h stdint.h stdlib.h string.h sys/time.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_TYPE_UID_T
-AC_TYPE_MODE_T
-AC_TYPE_OFF_T
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_C_INLINE
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memset strdup strerror])
+AC_CHECK_FUNCS([strdup strrchr strtoul])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
